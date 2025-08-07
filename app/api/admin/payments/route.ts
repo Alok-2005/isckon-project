@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDb from "@/app/db/connectDb";
-import Payment from "@/app/models/Payment";
+import Payment, { PaymentDocument } from "@/app/models/Payment";
+import { FilterQuery } from "mongoose";
 
 export async function GET(req: Request) {
   await connectDb();
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     // Build query
-    const query: any = {};
+   const query: FilterQuery<PaymentDocument> = {};
     
     if (search) {
       query.$or = [

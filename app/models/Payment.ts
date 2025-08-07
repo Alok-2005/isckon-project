@@ -1,5 +1,5 @@
-import mongoose, { Schema } from "mongoose";
-
+import { InferSchemaType, model, Schema } from 'mongoose';
+import * as mongoose from 'mongoose';
 const PaymentSchema = new Schema({
   name: { type: String, required: true },
   contactNo: { type: String, required: true },
@@ -13,4 +13,6 @@ const PaymentSchema = new Schema({
   updatedAt: { type: Date },
 });
 
-export default mongoose.models.Payment || mongoose.model("Payment", PaymentSchema);
+export type PaymentDocument = InferSchemaType<typeof PaymentSchema>;
+
+export default mongoose.models.Payment || model<PaymentDocument>("Payment", PaymentSchema);

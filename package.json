@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "mongoose": "^8.16.4",
+    "mongoose": "^8.17.0",
     "next": "15.4.1",
     "pdfkit": "^0.17.1",
     "razorpay": "^2.9.6",

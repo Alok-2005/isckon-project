@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import connectDb from "@/app/db/connectDb";
-import Payment from "@/app/models/Payment";
+import Payment, { PaymentDocument } from "@/app/models/Payment";
 import PDFDocument from "pdfkit";
+import { FilterQuery } from "mongoose";
 
-export async function GET(req: Request) {
+export async function GET(req: Request): Promise<Response | void> {
   await connectDb();
 
   try {
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
     const status = searchParams.get('status');
 
     // Build query
-    const query: any = {};
+    const query: FilterQuery<PaymentDocument> = {};
     
     if (status) {
       query.done = status === 'completed';
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
 
     } else if (format === 'pdf') {
       // Generate PDF
-      return new Promise((resolve, reject) => {
+      return new Promise<NextResponse>((resolve, reject) => {
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         const buffers: Buffer[] = [];
 

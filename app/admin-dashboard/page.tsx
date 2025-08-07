@@ -1,12 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { 
-  ChartBarIcon, 
   UsersIcon, 
   CurrencyRupeeIcon, 
   DocumentArrowDownIcon,
   MagnifyingGlassIcon,
-  CalendarIcon,
   CheckCircleIcon,
   ClockIcon
 } from "@heroicons/react/24/outline";
@@ -84,7 +82,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [filters]);
+  }, [filters,fetchData]);
 
   const handleFilterChange = (key: string, value: string | number) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
