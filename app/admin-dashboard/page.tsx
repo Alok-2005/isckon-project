@@ -13,7 +13,6 @@ import {
   PlusIcon,
   ArrowPathIcon,
   BanknotesIcon,
-  CreditCardIcon,
   PhoneIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
@@ -29,7 +28,7 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
-import { Bar, Line, Doughnut } from "react-chartjs-2";
+import { Bar, Doughnut } from "react-chartjs-2";
 import toast, { Toaster } from "react-hot-toast";
 
 ChartJS.register(
@@ -142,14 +141,14 @@ export default function AdminDashboard() {
     fetchData();
     const interval = setInterval(() => fetchData(), 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [ fetchData ]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchData();
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [filters]);
+  }, [filters,fetchData]);
 
   const handleFilterChange = (key: string, value: string | number) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));

@@ -3,13 +3,22 @@ import PDFDocument from "pdfkit";
 import { promises as fs } from "fs";
 import path from "path";
 
+interface IPDFDocument extends PDFKit.PDFDocument {}
 // Initialize Twilio client
 const twilioClient = Twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
 
-interface PaymentData {
+// Interface for Twilio message options
+interface TwilioMessageOptions {
+  from: string;
+  to: string;
+  body: string;
+  mediaUrl?: string[];
+}
+
+export interface PaymentData {
   name: string;
   amount: number;
   contactNo?: string;
@@ -34,7 +43,7 @@ export const sendWhatsAppMessage = async (
       throw new Error("Twilio credentials not configured");
     }
 
-    const messageOptions: any = {
+    const messageOptions: TwilioMessageOptions = {
       from: process.env.TWILIO_WHATSAPP_NUMBER || "whatsapp:+14155238886",
       to,
       body,
@@ -55,7 +64,7 @@ export const sendWhatsAppMessage = async (
     
     // Log specific Twilio errors
     if (error && typeof error === 'object' && 'code' in error) {
-      console.error("Twilio error code:", error.code);
+      console.error("Twilio error code:", (error as any).code);
       console.error("Twilio error message:", error);
     }
     
@@ -127,7 +136,7 @@ export const generateReceiptPDF = async (
   });
 };
 
-function generatePDFContent(doc: PDFKit.PDFDocument, payment: PaymentData, transactionId: string) {
+function generatePDFContent(doc: IPDFDocument, payment: PaymentData, transactionId: string) {
   // Header with logo area (you can add logo later)
   doc.fontSize(24).font('Helvetica-Bold')
      .text('🏛️ ISKCON', { align: 'center' });
