@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDb from "@/app/db/connectDb"; // Adjust path if needed
 import Payment from "@/app/models/Payment";
-import { generateReceiptPDF } from "@/app/lib/whatsapp"; // Adjust path if needed
+import { generateReceiptPDF, sendWhatsAppMessage } from "@/app/lib/whatsapp"; // Adjust path if needed
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
   await connectDb();
@@ -15,33 +16,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
     }
 
-    // Generate unique transaction ID for cash (e.g., CASH- followed by timestamp)
-   // Inside the try block, after validation
-const transactionId = `CASH-${Date.now()}`;
-const oid = `CASH-OID-${Date.now()}`;  // Generated to avoid any validation hiccups
+    // Validate contact number format
+    const contactRegex = /^\+91\d{10}$/;
+    if (!contactRegex.test(contactNo)) {
+      return NextResponse.json({ success: false, message: "Contact number must be in format +91xxxxxxxxxx" }, { status: 400 });
+    }
 
-const newPayment = await Payment.create({
-  name,
-  contactNo,
-  amount: parseFloat(amount),
-  transactionId,
-  oid,  // Explicitly set
-  to_user,
-  done: true,
-  method,
-  updatedAt: new Date(),
-});
+    // Validate amount
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return NextResponse.json({ success: false, message: "Invalid amount" }, { status: 400 });
+    }
 
+    // Generate unique transaction ID for cash
+    const transactionId = `CASH-${uuidv4()}`;
+    const oid = `CASH-OID-${Date.now()}`;
+
+    const newPayment = await Payment.create({
+      name,
+      contactNo,
+      amount: amountNum,
+      transactionId,
+      oid,
+      to_user,
+      done: true,
+      method,
+      updatedAt: new Date(),
+    });
 
     // Generate PDF
     const { pdfUrl } = await generateReceiptPDF(newPayment, transactionId);
 
-    // Prepare message for existing WhatsApp route
+    // Send WhatsApp message with receipt
     const message = `Payment Successful (Cash)!
 
 ISKCON Payment Receipt
 Name: ${name}
-Amount: ₹${amount}
+Amount: ₹${amountNum.toLocaleString('en-IN')}
 Contact: ${contactNo}
 Transaction ID: ${transactionId}
 Payment Method: Cash
@@ -50,19 +61,12 @@ Recipient: ${to_user}
 
 Thank you for your donation to ISKCON!`;
 
-    // Call existing /api/whatsapp/verify route internally
-    const whatsappResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/whatsapp/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: `whatsapp:${contactNo}`,
-        message, // Matches the expected format
-      }),
-    });
-
-    if (!whatsappResponse.ok) {
-      throw new Error("Failed to send WhatsApp message");
-    }
+    // Send WhatsApp message with PDF attachment
+    await sendWhatsAppMessage(
+      `whatsapp:${contactNo}`,
+      message,
+      [pdfUrl]
+    );
 
     return NextResponse.json({ success: true, pdfUrl });
   } catch (error: unknown) {

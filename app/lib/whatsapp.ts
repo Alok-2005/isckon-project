@@ -2,6 +2,7 @@ import Twilio from "twilio";
 import PDFDocument from "pdfkit";
 import { promises as fs } from "fs";
 import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 const twilioClient = Twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -43,59 +44,75 @@ export const generateReceiptPDF = async (
   transactionId: string
 ): Promise<{ fileName: string; pdfUrl: string; pdfBuffer: Buffer }> => {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      size: 'A4',
-      bufferPages: true,
-      autoFirstPage: true
-    });
+    try {
+      const doc = new PDFDocument({
+        size: 'A4',
+        bufferPages: true,
+        autoFirstPage: true,
+        font: 'Helvetica' // Use built-in font
+      });
     
-    const buffers: Buffer[] = [];
-    doc.on('data', (chunk) => buffers.push(chunk));
-    doc.on('end', async () => {
-      try {
-        const pdfBuffer = Buffer.concat(buffers);
+      const buffers: Buffer[] = [];
+      doc.on('data', (chunk) => buffers.push(chunk));
+      doc.on('end', async () => {
+        try {
+          const pdfBuffer = Buffer.concat(buffers);
         
-        // Save file
-        const receiptsDir = path.join(process.cwd(), "public", "receipts");
-        await fs.mkdir(receiptsDir, { recursive: true });
-        const fileName = `receipt-${transactionId}-${Date.now()}.pdf`;
-        const filePath = path.join(receiptsDir, fileName);
+          // Save file
+          const receiptsDir = path.join(process.cwd(), "public", "receipts");
+          await fs.mkdir(receiptsDir, { recursive: true });
+          const fileName = `receipt-${transactionId}-${Date.now()}.pdf`;
+          const filePath = path.join(receiptsDir, fileName);
         
-        // Save file asynchronously
-        fs.writeFile(filePath, pdfBuffer).catch(err => 
-          console.error('Error saving PDF file:', err)
-        );
+          // Save file asynchronously
+          fs.writeFile(filePath, pdfBuffer).catch(err => 
+            console.error('Error saving PDF file:', err)
+          );
         
-        const pdfUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/receipts/${fileName}`;
+          const pdfUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/receipts/${fileName}`;
         
-        resolve({ fileName, pdfUrl, pdfBuffer });
-      } catch (error) {
-        reject(error);
-      }
-    });
-    doc.on('error', reject);
+          resolve({ fileName, pdfUrl, pdfBuffer });
+        } catch (error) {
+          reject(error);
+        }
+      });
+      doc.on('error', reject);
 
-    // Generate PDF content
-    doc.fontSize(18).text('ISKCON Payment Receipt', { align: 'center' });
-    doc.moveDown(0.5);
+      // Generate PDF content with better styling
+      doc.fontSize(20).font('Helvetica-Bold').text('ISKCON Payment Receipt', { align: 'center' });
+      doc.moveDown(0.5);
+      
+      // Add a line separator
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+      doc.moveDown(1);
     
-    const receiptData = [
-      `Name: ${payment.name || 'Unknown'}`,
-      `Amount: ₹${payment.amount || 0}`,
-      `Contact: ${payment.contactNo || 'Not available'}`,
-      `UPI ID: ${payment.upiId || 'Not available'}`,
-      `Transaction ID: ${payment.transactionId || 'Not available'}`,
-      `Razorpay Payment ID: ${payment.razorpayPaymentId || 'Not available'}`,
-      `Date: ${payment.updatedAt ? new Date(payment.updatedAt).toLocaleString() : 'N/A'}`,
-      `Recipient: ${payment.to_user || 'N/A'}`
-    ];
+      const receiptData = [
+        { label: 'Name', value: payment.name || 'Unknown' },
+        { label: 'Amount', value: `₹${(payment.amount || 0).toLocaleString('en-IN')}` },
+        { label: 'Contact', value: payment.contactNo || 'Not available' },
+        { label: 'UPI ID', value: payment.upiId || 'Not available' },
+        { label: 'Transaction ID', value: payment.transactionId || 'Not available' },
+        { label: 'Razorpay Payment ID', value: payment.razorpayPaymentId || 'Not available' },
+        { label: 'Date', value: payment.updatedAt ? new Date(payment.updatedAt).toLocaleString('en-IN') : new Date().toLocaleString('en-IN') },
+        { label: 'Recipient', value: payment.to_user || 'N/A' }
+      ];
 
-    doc.fontSize(11);
-    receiptData.forEach(line => {
-      doc.text(line);
-      doc.moveDown(0.2);
-    });
+      doc.fontSize(12).font('Helvetica');
+      receiptData.forEach(item => {
+        doc.font('Helvetica-Bold').text(`${item.label}: `, { continued: true });
+        doc.font('Helvetica').text(item.value);
+        doc.moveDown(0.3);
+      });
+      
+      doc.moveDown(1);
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+      doc.moveDown(0.5);
+      doc.fontSize(10).text('Thank you for your donation to ISKCON!', { align: 'center' });
+      doc.text('Hare Krishna!', { align: 'center' });
 
-    doc.end();
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
   });
 };
