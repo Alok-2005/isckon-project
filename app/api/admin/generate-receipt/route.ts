@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDb from "@/app/db/connectDb"; // Adjust path if needed
+import connectDb from "@/app/db/connectDb";
 import Payment from "@/app/models/Payment";
-import { generateReceiptPDF, sendWhatsAppMessage } from "@/app/lib/whatsapp"; // Adjust path if needed
+import { generateReceiptPDF, sendWhatsAppMessage } from "@/app/lib/whatsapp";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
@@ -44,35 +44,68 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date(),
     });
 
-    // Generate PDF
-    const { pdfUrl } = await generateReceiptPDF(newPayment, transactionId);
+    console.log("Cash payment created:", newPayment.transactionId);
 
-    // Send WhatsApp message with receipt
-    const message = `Payment Successful (Cash)!
+    try {
+      // Generate PDF receipt
+      const { pdfUrl } = await generateReceiptPDF(newPayment, transactionId);
 
-ISKCON Payment Receipt
-Name: ${name}
-Amount: ₹${amountNum.toLocaleString('en-IN')}
-Contact: ${contactNo}
-Transaction ID: ${transactionId}
-Payment Method: Cash
-Date: ${new Date().toLocaleString("en-IN")}
-Recipient: ${to_user}
+      // Send WhatsApp message with receipt
+      const receiptMessage = `✅ Cash Payment Received!
 
-Thank you for your donation to ISKCON!`;
+📄 ISKCON Payment Receipt
+👤 Name: ${name}
+💰 Amount: ₹${amountNum.toLocaleString('en-IN')}
+📱 Contact: ${contactNo}
+🆔 Transaction ID: ${transactionId}
+💳 Payment Method: Cash
+📅 Date: ${new Date().toLocaleString("en-IN")}
+🏛️ Recipient: ${to_user}
 
-    // Send WhatsApp message with PDF attachment
-    await sendWhatsAppMessage(
-      `whatsapp:${contactNo}`,
-      message,
-      [pdfUrl]
-    );
+🙏 Thank you for your donation to ISKCON!
+Your receipt is attached above.
+Hare Krishna! 🕉️
 
-    return NextResponse.json({ success: true, pdfUrl });
-  } catch (error: unknown) {
+💬 Save this Transaction ID to request receipt again:
+${transactionId}`;
+
+      // Send WhatsApp message with PDF attachment
+      await sendWhatsAppMessage(
+        `whatsapp:${contactNo}`,
+        receiptMessage,
+        [pdfUrl]
+      );
+
+      console.log("WhatsApp message sent successfully to:", contactNo);
+
+      return NextResponse.json({ 
+        success: true, 
+        message: "Cash receipt generated and sent via WhatsApp successfully!",
+        transactionId,
+        pdfUrl 
+      });
+
+    } catch (whatsappError) {
+      console.error("Error sending WhatsApp message:", whatsappError);
+      
+      // Still return success since payment was created, just note the delivery failure
+      return NextResponse.json({ 
+        success: true, 
+        message: "Cash receipt generated but WhatsApp delivery failed",
+        transactionId,
+        note: "Receipt was created but could not be sent via WhatsApp. Please check Twilio configuration.",
+        error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError)
+      });
+    }
+
+  } catch (error) {
     console.error("Error generating receipt:", error);
     return NextResponse.json(
-      { success: false, message: "Server error", error: error instanceof Error ? error.message : String(error) },
+      { 
+        success: false, 
+        message: "Server error", 
+        error: error instanceof Error ? error.message : String(error) 
+      },
       { status: 500 }
     );
   }
