@@ -3,7 +3,6 @@ import connectDb from "@/app/db/connectDb";
 import Payment from "@/app/models/Payment";
 import { generateReceiptPDF, sendWhatsAppMessage, PaymentData } from "@/app/lib/whatsapp";
 
-// Define interfaces for request body
 interface TwilioFormData {
   From: string;
   Body: string;
@@ -31,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   try {
     console.log("WhatsApp webhook received");
-    
+
     const contentType = req.headers.get("content-type") || "";
     let body: RequestBody;
     let from: string;
@@ -52,15 +51,13 @@ export async function POST(req: NextRequest) {
       body = await req.json() as DirectApiData;
       console.log("Direct API call received:", body);
 
-      if (body.paymentData || (body.from && body.message)) {
-        from = body.from!;
-        messageBody = body.message!;
-        
-        if (body.paymentData) {
-          return handlePaymentVerification(body.paymentData, from);
-        } else {
-          return handleIncomingWhatsAppMessage(from, messageBody);
-        }
+      if (body.paymentData && body.from) {
+        from = body.from;
+        return handlePaymentVerification(body.paymentData, from);
+      } else if (body.from && body.message) {
+        from = body.from;
+        messageBody = body.message;
+        return handleIncomingWhatsAppMessage(from, messageBody);
       }
     }
 
@@ -68,14 +65,13 @@ export async function POST(req: NextRequest) {
       { success: false, message: "Invalid request format" },
       { status: 400 }
     );
-
   } catch (error) {
     console.error("Error in WhatsApp webhook:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: "Server error", 
-        error: error instanceof Error ? error.message : String(error) 
+      {
+        success: false,
+        message: "Server error",
+        error: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
@@ -84,53 +80,59 @@ export async function POST(req: NextRequest) {
 
 async function handlePaymentVerification(paymentData: VerificationPaymentData, from: string) {
   try {
-    console.log("Processing payment verification for:", paymentData.transactionId);
+    console.log("Processing payment verification for:", paymentData.transactionId, "from:", from);
 
-    const payment = await Payment.findOne({ 
+    const payment = await Payment.findOne({
       transactionId: paymentData.transactionId,
-      done: true 
+      done: true,
     }).lean() as PaymentData | null;
 
     if (!payment) {
       console.error("Payment not found:", paymentData.transactionId);
       return NextResponse.json(
-        { success: false, message: "Payment not found" },
+        { success: false, message: `Payment not found for transaction ID: ${paymentData.transactionId}` },
         { status: 404 }
       );
     }
 
-    const { pdfUrl } = await generateReceiptPDF(payment, payment.transactionId);
+    // Ensure phone number is in correct format
+    const normalizedFrom = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
+    console.debug("Normalized phone number:", normalizedFrom);
+
+    const { pdfUrl } = await generateReceiptPDF(payment, paymentData.transactionId);
+    console.debug("Generated PDF URL:", pdfUrl);
 
     const receiptMessage = `🎉 Payment Successful!
 
 📄 ISKCON Payment Receipt
 👤 Name: ${payment.name}
-💰 Amount: ₹${payment.amount.toLocaleString('en-IN')}
-📱 Contact: ${payment.contactNo || 'Not available'}
+💰 Amount: ₹${payment.amount.toLocaleString("en-IN")}
+📱 Contact: ${payment.contactNo || "Not available"}
 🆔 Transaction ID: ${payment.transactionId}
-💳 Payment Method: ${paymentData.paymentMethod || 'Online'}
-${payment.upiId ? `📱 UPI ID: ${payment.upiId}` : ''}
-📅 Date: ${payment.updatedAt ? new Date(payment.updatedAt).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')}
+💳 Payment Method: ${paymentData.paymentMethod || payment.method || "Online"}
+${payment.upiId ? `📱 UPI ID: ${payment.upiId}` : ""}
+📅 Date: ${payment.updatedAt ? new Date(payment.updatedAt).toLocaleString("en-IN") : new Date().toLocaleString("en-IN")}
 🏛️ Recipient: ${payment.to_user}
 
 🙏 Thank you for your donation to ISKCON!
 Hare Krishna! 🕉️`;
 
-    await sendWhatsAppMessage(from, receiptMessage, [pdfUrl]);
+    await sendWhatsAppMessage(normalizedFrom, receiptMessage, [pdfUrl]);
+    console.debug("WhatsApp message sent successfully to:", normalizedFrom);
 
     return NextResponse.json({
       success: true,
       message: "Receipt sent successfully",
-      pdfUrl
+      pdfUrl,
+      transactionId: paymentData.transactionId,
     });
-
   } catch (error) {
     console.error("Error in payment verification:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: "Error processing payment verification",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
@@ -140,9 +142,9 @@ Hare Krishna! 🕉️`;
 async function handleIncomingWhatsAppMessage(from: string, messageBody: string) {
   try {
     console.log("Processing incoming WhatsApp message from:", from);
-    
+
     const transactionIdMatch = messageBody.match(/(?:Transaction ID|TXN|ID)[\s:]*([A-Za-z0-9\-_]+)/i);
-    
+
     if (!transactionIdMatch) {
       const helpMessage = `🙏 Welcome to ISKCON Payment System!
 
@@ -159,7 +161,8 @@ CASH-abc123-xyz
 Need help? Contact our support team.
 Hare Krishna! 🕉️`;
 
-      await sendWhatsAppMessage(from, helpMessage);
+      const normalizedFrom = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
+      await sendWhatsAppMessage(normalizedFrom, helpMessage);
       return NextResponse.json({ success: true, message: "Help message sent" });
     }
 
@@ -168,7 +171,7 @@ Hare Krishna! 🕉️`;
 
     const payment = await Payment.findOne({
       transactionId: transactionId,
-      done: true
+      done: true,
     }).lean() as PaymentData | null;
 
     if (!payment) {
@@ -184,45 +187,51 @@ Please check:
 Need help? Contact our support team.
 🙏 Hare Krishna!`;
 
-      await sendWhatsAppMessage(from, notFoundMessage);
-      return NextResponse.json({ 
-        success: false, 
-        message: "Payment not found" 
-      }, { status: 404 });
+      const normalizedFrom = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
+      await sendWhatsAppMessage(normalizedFrom, notFoundMessage);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Payment not found",
+        },
+        { status: 404 }
+      );
     }
 
+    const normalizedFrom = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
     const { pdfUrl } = await generateReceiptPDF(payment, transactionId);
 
     const receiptMessage = `✅ Receipt Found!
 
 📄 ISKCON Payment Receipt
 👤 Name: ${payment.name}
-💰 Amount: ₹${payment.amount.toLocaleString('en-IN')}
-📱 Contact: ${payment.contactNo || 'Not available'}
+💰 Amount: ₹${payment.amount.toLocaleString("en-IN")}
+📱 Contact: ${payment.contactNo || "Not available"}
 🆔 Transaction ID: ${payment.transactionId}
-💳 Method: ${payment.method === 'cash' ? 'Cash' : 'Online'}
-${payment.upiId && payment.upiId !== 'Not available' ? `📱 UPI ID: ${payment.upiId}` : ''}
-📅 Date: ${payment.updatedAt ? new Date(payment.updatedAt).toLocaleString('en-IN') : 'N/A'}
+💳 Method: ${payment.method === "cash" ? "Cash" : "Online"}
+${payment.upiId && payment.upiId !== "Not available" ? `📱 UPI ID: ${payment.upiId}` : ""}
+📅 Date: ${payment.updatedAt ? new Date(payment.updatedAt).toLocaleString("en-IN") : "N/A"}
 🏛️ Recipient: ${payment.to_user}
 
 🙏 Thank you for your donation to ISKCON!
 Hare Krishna! 🕉️`;
 
-    await sendWhatsAppMessage(from, receiptMessage, [pdfUrl]);
+    await sendWhatsAppMessage(normalizedFrom, receiptMessage, [pdfUrl]);
+    console.debug("WhatsApp message sent successfully to:", normalizedFrom);
 
     return NextResponse.json({
       success: true,
       message: "Receipt sent successfully",
       transactionId: transactionId,
-      pdfUrl
+      pdfUrl,
     });
-
   } catch (error) {
     console.error("Error processing incoming message:", error);
-    
+
     try {
+      const normalizedFrom = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
       await sendWhatsAppMessage(
-        from, 
+        normalizedFrom,
         "🔧 Technical Error\n\nSorry, we're experiencing technical difficulties. Please try again later or contact support.\n\n🙏 Hare Krishna!"
       );
     } catch (sendError) {
@@ -230,10 +239,10 @@ Hare Krishna! 🕉️`;
     }
 
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: "Error processing message",
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
