@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   UsersIcon,
   CurrencyRupeeIcon,
@@ -28,20 +28,17 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
+import dynamic from "next/dynamic";
 import toast, { Toaster } from "react-hot-toast";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
+const Bar = dynamic(() => import("react-chartjs-2").then((mod) => mod.Bar), {
+  ssr: false,
+});
+const Doughnut = dynamic(() => import("react-chartjs-2").then((mod) => mod.Doughnut), {
+  ssr: false,
+});
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
 
 interface Payment {
   _id: string;
@@ -89,11 +86,11 @@ export default function AdminDashboard() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [generateForm, setGenerateForm] = useState({ 
-    name: "", 
-    amount: "", 
-    contactNo: "", 
-    to_user: "Temple Fund" 
+  const [generateForm, setGenerateForm] = useState({
+    name: "",
+    amount: "",
+    contactNo: "",
+    to_user: "Temple Fund",
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [filters, setFilters] = useState({
@@ -105,50 +102,103 @@ export default function AdminDashboard() {
     limit: 10,
   });
 
-  const fetchData = async (showToast = false) => {
-    setLoading(true);
-    setError("");
-    try {
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value.toString());
-      });
+  const fetchData = useCallback(
+    async (showToast = false): Promise<(() => void) | undefined> => {
+      setLoading(true);
+      setError("");
+      let isMounted = true;
 
-      const response = await fetch(`/api/admin/payments?${params}`);
+      try {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            params.append(key, value.toString());
+          }
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const url = `/api/admin/payments?${params.toString()}`;
+        console.debug("Fetching data from:", url);
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            // Add authentication headers if required, e.g.:
+            // Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`);
+        }
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Invalid response format: Expected JSON");
+        }
+
+        const result = await response.json();
+        console.debug("API Response:", result);
+
+        if (!result.success || !result.data) {
+          throw new Error(result.message || "Failed to fetch data");
+        }
+
+        if (isMounted) {
+          setData(result.data as DashboardData);
+          if (showToast) toast.success("Data refreshed successfully");
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        if (isMounted) {
+          const errorMessage = err instanceof Error ? err.message : "Failed to fetch data";
+          setError(errorMessage);
+          toast.error(`Failed to load data: ${errorMessage}`);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
 
-      const result = await response.json();
-
-      if (result.success) {
-        setData(result.data);
-        if (showToast) toast.success("Data refreshed successfully");
-      } else {
-        throw new Error(result.message || "Failed to fetch data");
-      }
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch data");
-      toast.error("Failed to load data");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return () => {
+        isMounted = false;
+      };
+    },
+    [filters, setData, setError, setLoading] // Dependencies for useCallback
+  );
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(() => fetchData(), 60000);
-    return () => clearInterval(interval);
-  }, [ fetchData ]);
+    let cleanup: (() => void) | undefined;
+    let intervalId: NodeJS.Timeout;
+
+    const initFetch = async () => {
+      cleanup = await fetchData();
+      intervalId = setInterval(async () => {
+        const intervalCleanup = await fetchData();
+        if (intervalCleanup) intervalCleanup();
+      }, 60000);
+    };
+
+    initFetch();
+
+    return () => {
+      if (cleanup) cleanup();
+      clearInterval(intervalId);
+    };
+  }, [fetchData]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchData();
+    let cleanup: (() => void) | undefined;
+    const timeoutId = setTimeout(async () => {
+      cleanup = await fetchData();
     }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [filters,fetchData]);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (cleanup) cleanup();
+    };
+  }, [fetchData, filters]);
 
   const handleFilterChange = (key: string, value: string | number) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
@@ -206,14 +256,12 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Validate contact number format
     const contactRegex = /^\+91\d{10}$/;
     if (!contactRegex.test(generateForm.contactNo)) {
       toast.error("Contact number must be in format +91xxxxxxxxxx");
       return;
     }
 
-    // Validate amount
     const amount = parseFloat(generateForm.amount);
     if (isNaN(amount) || amount <= 0) {
       toast.error("Please enter a valid amount");
@@ -225,11 +273,11 @@ export default function AdminDashboard() {
       const response = await fetch("/api/admin/generate-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          ...generateForm, 
+        body: JSON.stringify({
+          ...generateForm,
           amount: amount,
-          method: "cash", 
-          done: true 
+          method: "cash",
+          done: true,
         }),
       });
 
@@ -282,9 +330,8 @@ export default function AdminDashboard() {
     );
   }
 
-  // Chart Data for Monthly Revenue
   const chartData = {
-    labels: data.monthlyRevenue.map((m) => 
+    labels: data.monthlyRevenue.map((m) =>
       new Date(m._id.year, m._id.month - 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" })
     ),
     datasets: [
@@ -299,7 +346,6 @@ export default function AdminDashboard() {
     ],
   };
 
-  // Payment Status Chart
   const statusChartData = {
     labels: ["Completed", "Pending"],
     datasets: [
@@ -314,8 +360,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Toaster position="top-right" />
-      
-      {/* Header */}
+
       <div className="bg-white shadow-lg border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
@@ -345,7 +390,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-slate-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
@@ -408,7 +452,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Analytics Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 border border-slate-200">
             <div className="flex items-center justify-between mb-6">
@@ -421,27 +464,27 @@ export default function AdminDashboard() {
                 Last 12 months
               </div>
             </div>
-            <Bar 
-              data={chartData} 
-              options={{ 
-                responsive: true, 
-                plugins: { 
+            <Bar
+              data={chartData}
+              options={{
+                responsive: true,
+                plugins: {
                   legend: { position: "top" },
                   tooltip: {
                     callbacks: {
-                      label: (context) => `Revenue: ₹${context.parsed.y.toLocaleString()}`
-                    }
-                  }
+                      label: (context) => `Revenue: ₹${context.parsed.y.toLocaleString()}`,
+                    },
+                  },
                 },
                 scales: {
                   y: {
                     beginAtZero: true,
                     ticks: {
-                      callback: (value) => `₹${value.toLocaleString()}`
-                    }
-                  }
-                }
-              }} 
+                      callback: (value) => `₹${value.toLocaleString()}`,
+                    },
+                  },
+                },
+              }}
             />
           </div>
 
@@ -450,24 +493,23 @@ export default function AdminDashboard() {
               <CheckCircleIcon className="h-6 w-6 mr-2 text-green-500" />
               Payment Status
             </h3>
-            <Doughnut 
-              data={statusChartData} 
-              options={{ 
+            <Doughnut
+              data={statusChartData}
+              options={{
                 responsive: true,
                 plugins: {
                   legend: { position: "bottom" },
                   tooltip: {
                     callbacks: {
-                      label: (context) => `${context.label}: ${context.parsed}`
-                    }
-                  }
-                }
-              }} 
+                      label: (context) => `${context.label}: ${context.parsed}`,
+                    },
+                  },
+                },
+              }}
             />
           </div>
         </div>
 
-        {/* Filters and Generate Receipt */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-slate-200">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-slate-900 flex items-center">
@@ -482,7 +524,7 @@ export default function AdminDashboard() {
               Generate Cash Receipt
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
             <div className="relative lg:col-span-2">
               <MagnifyingGlassIcon className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -538,7 +580,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Payments Table */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-200">
           <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50">
             <h3 className="text-lg font-semibold text-slate-900 flex items-center">
@@ -551,7 +592,9 @@ export default function AdminDashboard() {
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Name & Recipient</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Name & Recipient
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Contact</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Amount</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Transaction</th>
@@ -632,7 +675,6 @@ export default function AdminDashboard() {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="bg-slate-50 px-4 py-3 flex items-center justify-between border-t border-slate-200 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
@@ -721,7 +763,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Payment Detail Modal */}
       {selectedPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
@@ -762,7 +803,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Receipt Preview Modal */}
       {receiptPreviewUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 relative">
@@ -778,7 +818,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Generate Receipt Modal */}
       {showGenerateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
