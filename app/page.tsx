@@ -1,5 +1,5 @@
 "use client"
-import HomePage from "@/components/Homepage"
+import HomePage from "@/components/Homepage/Homepage"
 function page() {
   return (
     <div>

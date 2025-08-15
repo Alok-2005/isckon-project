@@ -1,5 +1,5 @@
-"use client";
-import { useState, useEffect, useCallback } from "react";
+"use client"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   UsersIcon,
   CurrencyRupeeIcon,
@@ -15,7 +15,7 @@ import {
   BanknotesIcon,
   PhoneIcon,
   UserIcon,
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/24/outline"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -27,72 +27,72 @@ import {
   Tooltip,
   Legend,
   ArcElement,
-} from "chart.js";
-import dynamic from "next/dynamic";
-import toast, { Toaster } from "react-hot-toast";
+} from "chart.js"
+import dynamic from "next/dynamic"
+import toast, { Toaster } from "react-hot-toast"
 
 const Bar = dynamic(() => import("react-chartjs-2").then((mod) => mod.Bar), {
   ssr: false,
-});
+})
 const Doughnut = dynamic(() => import("react-chartjs-2").then((mod) => mod.Doughnut), {
   ssr: false,
-});
+})
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement)
 
 interface Payment {
-  _id: string;
-  name: string;
-  contactNo: string;
-  amount: number;
-  transactionId: string;
-  razorpayPaymentId?: string;
-  upiId?: string;
-  to_user: string;
-  done: boolean;
-  updatedAt: string;
-  method?: string;
+  _id: string
+  name: string
+  contactNo: string
+  amount: number
+  transactionId: string
+  razorpayPaymentId?: string
+  upiId?: string
+  to_user: string
+  done: boolean
+  updatedAt: string
+  method?: string
 }
 
 interface Stats {
-  totalRevenue: number;
-  totalPayments: number;
-  completedPayments: number;
-  pendingPayments: number;
+  totalRevenue: number
+  totalPayments: number
+  completedPayments: number
+  pendingPayments: number
 }
 
 interface MonthlyRevenue {
-  _id: { year: number; month: number };
-  revenue: number;
-  count: number;
+  _id: { year: number; month: number }
+  revenue: number
+  count: number
 }
 
 interface DashboardData {
-  payments: Payment[];
+  payments: Payment[]
   pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-  stats: Stats;
-  monthlyRevenue: MonthlyRevenue[];
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+  stats: Stats
+  monthlyRevenue: MonthlyRevenue[]
 }
 
 export default function AdminDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>("")
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null)
+  const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [generateForm, setGenerateForm] = useState({
     name: "",
     amount: "",
     contactNo: "",
     to_user: "Temple Fund",
-  });
-  const [isGenerating, setIsGenerating] = useState(false);
+  })
+  const [isGenerating, setIsGenerating] = useState(false)
   const [filters, setFilters] = useState({
     search: "",
     status: "",
@@ -100,175 +100,245 @@ export default function AdminDashboard() {
     dateTo: "",
     page: 1,
     limit: 10,
-  });
+  })
+
+  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  const isInitialMount = useRef(true)
 
   const fetchData = useCallback(
-    async (showToast = false): Promise<(() => void) | undefined> => {
-      setLoading(true);
-      setError("");
-      let isMounted = true;
+    async (showToast = false): Promise<void> => {
+      setLoading(true)
+      setError("")
 
       try {
-        const params = new URLSearchParams();
+        const params = new URLSearchParams()
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
-            params.append(key, value.toString());
+            params.append(key, value.toString())
           }
-        });
+        })
 
-        const url = `/api/admin/payments?${params.toString()}`;
-        console.debug("Fetching data from:", url);
+        const url = `/api/admin/payments?${params.toString()}`
+        console.debug("Fetching data from:", url)
 
         const response = await fetch(url, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            // Add authentication headers if required, e.g.:
-            // Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           },
-        });
+        })
 
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`);
+          throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`)
         }
 
-        const contentType = response.headers.get("content-type");
+        const contentType = response.headers.get("content-type")
         if (!contentType || !contentType.includes("application/json")) {
-          throw new Error("Invalid response format: Expected JSON");
+          throw new Error("Invalid response format: Expected JSON")
         }
 
-        const result = await response.json();
-        console.debug("API Response:", result);
+        const result = await response.json()
+        console.debug("API Response:", result)
 
         if (!result.success || !result.data) {
-          throw new Error(result.message || "Failed to fetch data");
+          throw new Error(result.message || "Failed to fetch data")
         }
 
-        if (isMounted) {
-          setData(result.data as DashboardData);
-          if (showToast) toast.success("Data refreshed successfully");
-        }
+        setData(result.data as DashboardData)
+        if (showToast) toast.success("Data refreshed successfully")
       } catch (err) {
-        console.error("Error fetching data:", err);
-        if (isMounted) {
-          const errorMessage = err instanceof Error ? err.message : "Failed to fetch data";
-          setError(errorMessage);
-          toast.error(`Failed to load data: ${errorMessage}`);
-        }
+        console.error("Error fetching data:", err)
+        const errorMessage = err instanceof Error ? err.message : "Failed to fetch data"
+        setError(errorMessage)
+        toast.error(`Failed to load data: ${errorMessage}`)
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false)
       }
-
-      return () => {
-        isMounted = false;
-      };
     },
-    [filters, setData, setError, setLoading] // Dependencies for useCallback
-  );
+    [filters],
+  )
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    let intervalId: NodeJS.Timeout;
-
-    const initFetch = async () => {
-      cleanup = await fetchData();
-      intervalId = setInterval(async () => {
-        const intervalCleanup = await fetchData();
-        if (intervalCleanup) intervalCleanup();
-      }, 60000);
-    };
-
-    initFetch();
-
-    return () => {
-      if (cleanup) cleanup();
-      clearInterval(intervalId);
-    };
-  }, [fetchData]);
+    if (isInitialMount.current) {
+      fetchData()
+      isInitialMount.current = false
+    }
+  }, [fetchData])
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    const timeoutId = setTimeout(async () => {
-      cleanup = await fetchData();
-    }, 300);
+    if (isInitialMount.current) return
+
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // Set new timeout for search and filters only
+    searchTimeoutRef.current = setTimeout(() => {
+      // Reset to page 1 when searching/filtering
+      setFilters((prev) => ({ ...prev, page: 1 }))
+      fetchData()
+    }, 500) // 500ms debounce
 
     return () => {
-      clearTimeout(timeoutId);
-      if (cleanup) cleanup();
-    };
-  }, [fetchData, filters]);
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [filters.search, filters.status, filters.dateFrom, filters.dateTo])
+
+  useEffect(() => {
+    if (isInitialMount.current) return
+
+    // Only fetch if page or limit changed, not other filters
+    const timeoutId = setTimeout(() => {
+      fetchData()
+    }, 50) // Very short delay to prevent conflicts
+
+    return () => clearTimeout(timeoutId)
+  }, [filters.page, filters.limit])
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchData(true) // Show toast for auto-refresh
+    }, 60000)
+
+    return () => clearInterval(intervalId)
+  }, [fetchData])
 
   const handleFilterChange = (key: string, value: string | number) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
-  };
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      // Reset page to 1 when changing filters (except for page and limit changes)
+      ...(key !== "page" && key !== "limit" ? { page: 1 } : {}),
+    }))
+  }
 
   const handleExport = async (format: "csv" | "pdf") => {
-    try {
-      const params = new URLSearchParams();
-      if (filters.status) params.append("status", filters.status);
-      if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
-      if (filters.dateTo) params.append("dateTo", filters.dateTo);
-      params.append("format", format);
+  try {
+    toast.loading(`Preparing ${format.toUpperCase()} export...`);
 
-      const response = await fetch(`/api/admin/export?${params}`);
+    const params = new URLSearchParams();
+    if (filters.search) params.append("search", filters.search);
+    if (filters.status) params.append("status", filters.status);
+    if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+    if (filters.dateTo) params.append("dateTo", filters.dateTo);
+    params.append("format", format);
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `payments-export.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        toast.success(`${format.toUpperCase()} exported successfully`);
-      } else {
-        throw new Error("Export failed");
-      }
-    } catch (err) {
-      console.error("Export error:", err);
-      toast.error("Export failed");
+    const response = await fetch(`/api/admin/export?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        Accept: format === "pdf" ? "application/pdf" : "text/csv",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Export failed: ${response.status} - ${errorText}`);
     }
-  };
+
+    const blob = await response.blob();
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payments-export-${new Date().toISOString().split("T")[0]}.${format}`;
+    a.style.display = "none";
+
+    document.body.appendChild(a);
+    a.click();
+
+    // Cleanup
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 100);
+
+    toast.dismiss();
+    toast.success(`${format.toUpperCase()} exported successfully`);
+  } catch (err) {
+    console.error("Export error:", err);
+    toast.dismiss();
+    toast.error(err instanceof Error ? err.message : "Export failed");
+  }
+};
 
   const handleViewReceipt = async (payment: Payment) => {
     try {
-      const response = await fetch(`/api/receipts/${payment.transactionId}.pdf`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setReceiptPreviewUrl(url);
-      } else {
-        toast.error("Receipt not available");
+      toast.loading("Loading receipt...")
+
+      // Try multiple possible endpoints for receipt
+      const possibleEndpoints = [
+        `/api/receipts/${payment.transactionId}`,
+        `/api/admin/receipts/${payment.transactionId}`,
+        `/api/receipts/download/${payment.transactionId}`,
+      ]
+
+      let response: Response | null = null
+      let workingEndpoint = ""
+
+      for (const endpoint of possibleEndpoints) {
+        try {
+          response = await fetch(endpoint, {
+            method: "GET",
+            headers: {
+              Accept: "application/pdf",
+            },
+          })
+
+          if (response.ok) {
+            workingEndpoint = endpoint
+            break
+          }
+        } catch (e) {
+          console.log(`Endpoint ${endpoint} failed, trying next...`)
+        }
       }
+
+      if (!response || !response.ok) {
+        throw new Error("Receipt not found or not available")
+      }
+
+      const blob = await response.blob()
+
+      // Verify it's a PDF
+      if (blob.type !== "application/pdf" && !blob.type.includes("pdf")) {
+        throw new Error("Invalid receipt format received")
+      }
+
+      const url = URL.createObjectURL(blob)
+      setReceiptPreviewUrl(url)
+
+      toast.dismiss()
+      toast.success("Receipt loaded successfully")
     } catch (err) {
-      console.error("Error fetching receipt:", err);
-      toast.error("Failed to load receipt");
+      console.error("Error fetching receipt:", err)
+      toast.dismiss()
+      toast.error(err instanceof Error ? err.message : "Failed to load receipt")
     }
-  };
+  }
 
   const handleGenerateReceipt = async () => {
     if (!generateForm.name || !generateForm.amount || !generateForm.contactNo || !generateForm.to_user) {
-      toast.error("All fields are required");
-      return;
+      toast.error("All fields are required")
+      return
     }
 
-    const contactRegex = /^\+91\d{10}$/;
+    const contactRegex = /^\+91\d{10}$/
     if (!contactRegex.test(generateForm.contactNo)) {
-      toast.error("Contact number must be in format +91xxxxxxxxxx");
-      return;
+      toast.error("Contact number must be in format +91xxxxxxxxxx")
+      return
     }
 
-    const amount = parseFloat(generateForm.amount);
+    const amount = Number.parseFloat(generateForm.amount)
     if (isNaN(amount) || amount <= 0) {
-      toast.error("Please enter a valid amount");
-      return;
+      toast.error("Please enter a valid amount")
+      return
     }
 
-    setIsGenerating(true);
+    setIsGenerating(true)
     try {
       const response = await fetch("/api/admin/generate-receipt", {
         method: "POST",
@@ -279,25 +349,32 @@ export default function AdminDashboard() {
           method: "cash",
           done: true,
         }),
-      });
+      })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (response.ok && result.success) {
-        toast.success("Receipt generated and sent via WhatsApp successfully!");
-        setShowGenerateModal(false);
-        setGenerateForm({ name: "", amount: "", contactNo: "", to_user: "Temple Fund" });
-        fetchData(true);
+        toast.success("Receipt generated and sent via WhatsApp successfully!")
+        setShowGenerateModal(false)
+        setGenerateForm({ name: "", amount: "", contactNo: "", to_user: "Temple Fund" })
+        fetchData(true)
       } else {
-        throw new Error(result.message || "Generation failed");
+        throw new Error(result.message || "Generation failed")
       }
     } catch (err) {
-      console.error("Error generating receipt:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to generate receipt");
+      console.error("Error generating receipt:", err)
+      toast.error(err instanceof Error ? err.message : "Failed to generate receipt")
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
-  };
+  }
+
+  const closeReceiptPreview = () => {
+    if (receiptPreviewUrl) {
+      URL.revokeObjectURL(receiptPreviewUrl)
+    }
+    setReceiptPreviewUrl(null)
+  }
 
   if (loading) {
     return (
@@ -310,7 +387,7 @@ export default function AdminDashboard() {
           <p className="mt-4 text-slate-600 font-medium">Loading dashboard...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (!data) {
@@ -327,13 +404,17 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   const chartData = {
-    labels: data.monthlyRevenue.map((m) =>
-      new Date(m._id.year, m._id.month - 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" })
-    ),
+    labels: data.monthlyRevenue.map((m) => {
+      const date = new Date(m._id.year, m._id.month - 1, 1)
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      })
+    }),
     datasets: [
       {
         label: "Revenue (₹)",
@@ -344,7 +425,7 @@ export default function AdminDashboard() {
         borderRadius: 8,
       },
     ],
-  };
+  }
 
   const statusChartData = {
     labels: ["Completed", "Pending"],
@@ -355,7 +436,7 @@ export default function AdminDashboard() {
         borderWidth: 0,
       },
     ],
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -395,7 +476,9 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-emerald-700">Total Revenue</p>
-                <p className="text-3xl font-bold text-emerald-900">₹{data.stats.totalRevenue.toLocaleString("en-IN")}</p>
+                <p className="text-3xl font-bold text-emerald-900">
+                  ₹{data.stats.totalRevenue.toLocaleString("en-IN")}
+                </p>
                 <p className="text-xs text-emerald-600 flex items-center mt-1">
                   <ChartBarIcon className="h-3 w-3 mr-1" />
                   +12% from last month
@@ -564,18 +647,18 @@ export default function AdminDashboard() {
             <div className="flex space-x-2">
               <button
                 onClick={() => handleExport("csv")}
-                className="flex items-center px-3 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                className="flex items-center px-9 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
               >
                 <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
-                CSV
+                CSV / EXCEL
               </button>
-              <button
+              {/* <button
                 onClick={() => handleExport("pdf")}
                 className="flex items-center px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
                 PDF
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -595,12 +678,24 @@ export default function AdminDashboard() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Name & Recipient
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Transaction</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Transaction
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
@@ -617,7 +712,9 @@ export default function AdminDashboard() {
                       {payment.upiId && <div className="text-xs text-slate-500">{payment.upiId}</div>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-lg font-bold text-emerald-600">₹{payment.amount.toLocaleString("en-IN")}</div>
+                      <div className="text-lg font-bold text-emerald-600">
+                        ₹{payment.amount.toLocaleString("en-IN")}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-slate-600 font-mono bg-slate-100 px-2 py-1 rounded">
@@ -680,14 +777,14 @@ export default function AdminDashboard() {
               <button
                 onClick={() => handleFilterChange("page", Math.max(1, filters.page - 1))}
                 disabled={filters.page === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                className="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => handleFilterChange("page", Math.min(data.pagination.pages, filters.page + 1))}
-                disabled={filters.page === data.pagination.pages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                disabled={filters.page >= data.pagination.pages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
@@ -696,14 +793,14 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-sm text-slate-700">
                   Showing <span className="font-semibold">{(filters.page - 1) * filters.limit + 1}</span> to{" "}
-                  <span className="font-semibold">{Math.min(filters.page * filters.limit, data.pagination.total)}</span> of{" "}
-                  <span className="font-semibold">{data.pagination.total}</span> results
+                  <span className="font-semibold">{Math.min(filters.page * filters.limit, data.pagination.total)}</span>{" "}
+                  of <span className="font-semibold">{data.pagination.total}</span> results
                 </p>
               </div>
               <div className="flex items-center space-x-2">
                 <select
                   value={filters.limit}
-                  onChange={(e) => handleFilterChange("limit", parseInt(e.target.value))}
+                  onChange={(e) => handleFilterChange("limit", Number.parseInt(e.target.value))}
                   className="px-2 py-1 border border-slate-300 rounded-lg text-sm"
                 >
                   <option value={10}>10 per page</option>
@@ -714,20 +811,21 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleFilterChange("page", 1)}
                     disabled={filters.page === 1}
-                    className="relative inline-flex items-center px-3 py-2 rounded-l-lg border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                    className="relative inline-flex items-center px-3 py-2 rounded-l-lg border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     First
                   </button>
                   <button
                     onClick={() => handleFilterChange("page", Math.max(1, filters.page - 1))}
                     disabled={filters.page === 1}
-                    className="relative inline-flex items-center px-3 py-2 border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                    className="relative inline-flex items-center px-3 py-2 border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
                   </button>
                   {Array.from({ length: Math.min(5, data.pagination.pages) }, (_, i) => {
-                    const page = filters.page - 2 + i;
-                    if (page < 1 || page > data.pagination.pages) return null;
+                    const startPage = Math.max(1, filters.page - 2)
+                    const page = startPage + i
+                    if (page > data.pagination.pages) return null
                     return (
                       <button
                         key={page}
@@ -740,19 +838,19 @@ export default function AdminDashboard() {
                       >
                         {page}
                       </button>
-                    );
+                    )
                   })}
                   <button
                     onClick={() => handleFilterChange("page", Math.min(data.pagination.pages, filters.page + 1))}
-                    disabled={filters.page === data.pagination.pages}
-                    className="relative inline-flex items-center px-3 py-2 border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                    disabled={filters.page >= data.pagination.pages}
+                    className="relative inline-flex items-center px-3 py-2 border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                   </button>
                   <button
                     onClick={() => handleFilterChange("page", data.pagination.pages)}
-                    disabled={filters.page === data.pagination.pages}
-                    className="relative inline-flex items-center px-3 py-2 rounded-r-lg border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                    disabled={filters.page >= data.pagination.pages}
+                    className="relative inline-flex items-center px-3 py-2 rounded-r-lg border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Last
                   </button>
@@ -786,7 +884,9 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-500">Transaction ID</label>
-                <p className="text-slate-900 font-mono text-sm bg-slate-100 p-2 rounded">{selectedPayment.transactionId}</p>
+                <p className="text-slate-900 font-mono text-sm bg-slate-100 p-2 rounded">
+                  {selectedPayment.transactionId}
+                </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-500">Status</label>
@@ -807,13 +907,30 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 relative">
             <button
-              onClick={() => setReceiptPreviewUrl(null)}
-              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 transition-colors text-2xl"
+              onClick={closeReceiptPreview}
+              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 transition-colors text-2xl z-10"
             >
               ×
             </button>
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Receipt Preview</h3>
-            <iframe src={receiptPreviewUrl} className="w-full h-96 border border-slate-300 rounded-lg" title="Receipt Preview" />
+            <iframe
+              src={receiptPreviewUrl}
+              className="w-full h-96 border border-slate-300 rounded-lg"
+              title="Receipt Preview"
+              onError={() => {
+                toast.error("Failed to load receipt preview")
+                closeReceiptPreview()
+              }}
+            />
+            <div className="mt-4 flex justify-end">
+              <a
+                href={receiptPreviewUrl}
+                download="receipt.pdf"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Download Receipt
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -894,5 +1011,5 @@ export default function AdminDashboard() {
         </div>
       )}
     </div>
-  );
+  )
 }

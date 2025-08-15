@@ -85,7 +85,7 @@ function Hero() {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <span className="text-yellow-300 drop-shadow-[0_0_8px_rgba(234,179,8,0.6)]">Shri</span>{" "}
-          <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">Gauranga Dham</span>
+          <span className="text-yellow-300 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">Gauranga Dham</span>
         </motion.h1>
 
         {/* Status Card with Glass Morphism */}

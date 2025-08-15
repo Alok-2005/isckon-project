@@ -5,6 +5,7 @@ const PaymentSchema = new Schema({
   name: { type: String, required: true },
   contactNo: { type: String, required: true },
   amount: { type: Number, required: true },
+  purpose:{type:String,required:true},
   transactionId: { type: String, required: true },
   oid: { type: String },  // Made optional (remove 'required: true')
   to_user: { type: String, required: true },

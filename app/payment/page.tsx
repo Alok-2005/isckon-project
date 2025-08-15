@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import { v4 as uuidv4 } from "uuid";
 import { UserIcon, PhoneIcon, CurrencyRupeeIcon } from "@heroicons/react/24/outline";
+import { toast, Toaster } from "react-hot-toast";
 
 // Define an interface for Razorpay's response
 interface RazorpayResponse {
@@ -137,7 +138,7 @@ export default function Home() {
             .then((res) => res.json())
             .then((verifyData) => {
               if (verifyData.success) {
-                alert("Payment successful! Receipt has been sent to your WhatsApp.");
+                toast.success("Payment successful! Receipt has been sent to your WhatsApp.");
               } else {
                 setError("Payment verification failed: " + verifyData.message);
               }
@@ -164,6 +165,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-orange-100 flex items-center justify-center p-4">
+      <Toaster/>
       <Head>
         <title>ISKCON Payment Portal</title>
       </Head>
