@@ -7,9 +7,9 @@ export async function POST(req: Request) {
   await connectDb();
 
   try {
-    const { name, contactNo, amount, transactionId, to_user } = await req.json();
+    const { name, contactNo, purpose, amount, transactionId, to_user } = await req.json(); // ADDED PURPOSE
 
-    if (!name || !contactNo || !amount || !transactionId || !to_user) {
+    if (!name || !contactNo || !purpose || !amount || !transactionId || !to_user) { // ADDED PURPOSE VALIDATION
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
     }
 
@@ -38,6 +38,7 @@ export async function POST(req: Request) {
     const payment = new Payment({
       name,
       contactNo,
+      purpose, // ADDED PURPOSE FIELD
       amount,
       transactionId,
       oid: order.id,

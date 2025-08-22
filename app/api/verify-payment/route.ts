@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
     console.log("Razorpay Callback Body:", JSON.stringify(body, null, 2));
 
-    const payment = await Payment.findOne({ oid: razorpay_order_id }); // Changed 'let' to 'const'
+    const payment = await Payment.findOne({ oid: razorpay_order_id });
     if (!payment) {
       console.error("Order ID not found:", razorpay_order_id);
       return NextResponse.json(
@@ -92,6 +92,7 @@ export async function POST(req: Request) {
         name: updatedPayment.name || "Unknown",
         amount: updatedPayment.amount || 0,
         contactNo: updatedPayment.contactNo,
+        purpose: updatedPayment.purpose || "General Donation", // ADDED PURPOSE
         transactionId: updatedPayment.transactionId || "Not available",
         razorpayPaymentId: updatedPayment.razorpayPaymentId || "Not available",
         upiId: updatedPayment.upiId || "Not available",
@@ -109,6 +110,7 @@ export async function POST(req: Request) {
 ISKCON Payment Receipt
 Name: ${paymentData.name}
 Amount: Rs.${paymentData.amount}
+Purpose: ${paymentData.purpose}
 Contact: ${paymentData.contactNo}
 Transaction ID: ${paymentData.transactionId}
 Payment Method: ${paymentData.paymentMethod}

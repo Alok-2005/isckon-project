@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import Image from "next/image"
-import { useEffect, useRef } from "react"
+import Image from "next/image";
+import { useEffect, useRef } from "react";
+import Link from "next/link";
 
 function TempleGlimpses() {
   const originalEvents = [
@@ -23,67 +24,70 @@ function TempleGlimpses() {
       date: "May 11, 2025",
       image: "/GaurNitai.jpg",
     },
-  ]
+  ];
 
-  const events = [...originalEvents, ...originalEvents, ...originalEvents]
-  const contentRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<number>()
-  const translateXRef = useRef(0)
-  const isPausedRef = useRef(false)
+  const events = [...originalEvents, ...originalEvents, ...originalEvents];
+  const contentRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number>();
+  const translateXRef = useRef(0);
+  const isPausedRef = useRef(false);
 
   useEffect(() => {
-    const content = contentRef.current
-    if (!content) return
+    const content = contentRef.current;
+    if (!content) return;
 
-    const scrollSpeed = 0.5 // Adjust speed as needed
-    const cardWidth = 320 + 32 // card width + margin
-    const resetPoint = originalEvents.length * cardWidth
+    const scrollSpeed = 0.5; // Adjust speed as needed
+    const cardWidth = 320 + 32; // card width + margin
+    const resetPoint = originalEvents.length * cardWidth;
 
     const animate = () => {
       if (!isPausedRef.current && content) {
-        translateXRef.current -= scrollSpeed
+        translateXRef.current -= scrollSpeed;
 
         if (Math.abs(translateXRef.current) >= resetPoint) {
-          translateXRef.current = 0
+          translateXRef.current = 0;
         }
 
-        content.style.transform = `translateX(${translateXRef.current}px)`
+        content.style.transform = `translateX(${translateXRef.current}px)`;
       }
 
-      animationRef.current = requestAnimationFrame(animate)
-    }
+      animationRef.current = requestAnimationFrame(animate);
+    };
 
     // Start animation
-    animationRef.current = requestAnimationFrame(animate)
+    animationRef.current = requestAnimationFrame(animate);
 
     const handleMouseEnter = () => {
-      isPausedRef.current = true
-    }
+      isPausedRef.current = true;
+    };
 
     const handleMouseLeave = () => {
-      isPausedRef.current = false
-    }
+      isPausedRef.current = false;
+    };
 
-    content.addEventListener("mouseenter", handleMouseEnter)
-    content.addEventListener("mouseleave", handleMouseLeave)
+    content.addEventListener("mouseenter", handleMouseEnter);
+    content.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
       if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+        cancelAnimationFrame(animationRef.current);
       }
-      content.removeEventListener("mouseenter", handleMouseEnter)
-      content.removeEventListener("mouseleave", handleMouseLeave)
-    }
-  }, [originalEvents.length])
+      content.removeEventListener("mouseenter", handleMouseEnter);
+      content.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [originalEvents.length]);
 
   return (
     <section className="py-16 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-5xl font-bold text-purple-600 mb-4">A few glimpses from the ground</h2>
+          <h2 className="text-5xl font-bold text-purple-600 mb-4">
+            A few glimpses from the ground
+          </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Captures from what happening in and around the temple and what our devotees are up to.
+            Captures from what happening in and around the temple and what our
+            devotees are up to.
           </p>
         </div>
 
@@ -112,7 +116,9 @@ function TempleGlimpses() {
 
                 {/* Event Info */}
                 <div className="p-6 bg-white">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-1">{event.title}</h3>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-1">
+                    {event.title}
+                  </h3>
                   <p className="text-gray-600">{event.date}</p>
                 </div>
               </div>
@@ -122,22 +128,30 @@ function TempleGlimpses() {
 
         {/* View More Button */}
         <div className="text-center mt-12">
-          <button className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors">
-            View More Glimpses
-            <svg
-              className="ml-2 w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+          <Link 
+  href="/glimpses"
+  className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors"
+>
+  View More Glimpses
+  <svg
+    className="ml-2 w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 5l7 7-7 7"
+    />
+  </svg>
+</Link>
         </div>
       </div>
     </section>
-  )
+  );
 }
 
-export default TempleGlimpses
+export default TempleGlimpses;

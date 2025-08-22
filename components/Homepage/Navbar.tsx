@@ -30,12 +30,12 @@ function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-6">
-            <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Home</Link>
-            <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">About</Link>
-            <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Temple</Link>
-            <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Base</Link>
-            <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Media</Link>
-            {/* <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Donate</Link> */}
+            <Link href="/" className="text-gray-700 hover:text-purple-600 font-medium">Home</Link>
+            <Link href="/about" className="text-gray-700 hover:text-purple-600 font-medium">About</Link>
+            <Link href="/temple" className="text-gray-700 hover:text-purple-600 font-medium">Temple</Link>
+            <Link href="/base" className="text-gray-700 hover:text-purple-600 font-medium">Base</Link>
+            <Link href="/events" className="text-gray-700 hover:text-purple-600 font-medium">Events</Link>
+            <Link href="/glimpses" className="text-gray-700 hover:text-purple-600 font-medium">Glimpse</Link>
             {/* <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">More</Link> */}
             <Link 
               href="/payment" 
@@ -59,7 +59,7 @@ function Navbar() {
           <div className="lg:hidden bg-white border-t">
             <nav className="px-4 py-4 space-y-4 flex flex-col">
               <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Home</Link>
-              <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">About</Link>
+              <Link href="about" className="text-gray-700 hover:text-purple-600 font-medium">About</Link>
               <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Temple</Link>
               <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">GuestHouse</Link>
               <Link href="#" className="text-gray-700 hover:text-purple-600 font-medium">Media</Link>
