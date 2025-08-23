@@ -28,7 +28,7 @@ function TempleGlimpses() {
 
   const events = [...originalEvents, ...originalEvents, ...originalEvents];
   const contentRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number>(null);
   const translateXRef = useRef(0);
   const isPausedRef = useRef(false);
 

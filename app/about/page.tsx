@@ -126,7 +126,7 @@ const AboutIskconContent = () => (
       International Society for Krishna Consciousness, also popularly known as the Hare Krishna movement is a spiritual society founded by His Divine Grace A.C. Bhaktivedanta Swami Prabhupada in July 1966 in New York. ISKCON belongs to the Gandiya-Vaidniawa sampradaya, a monotheistic tradition within Vedic culture.
     </p>
     <p className="text-gray-700 leading-relaxed">
-      Today ISKCON comprises of more than 400 temples, 40 rural communities and over 100 vegetarian restaurants. It also conducts special projects throughout the world, such as "Food for Life", the only free vegetarian relief program in the world.
+      Today ISKCON comprises of more than 400 temples, 40 rural communities and over 100 vegetarian restaurants. It also conducts special projects throughout the world, such as &quot;Food for Life&quot;, the only free vegetarian relief program in the world.
     </p>
 
     <h2 className="text-2xl font-semibold text-purple-800 mt-8 mb-4">Our Beliefs</h2>
@@ -169,7 +169,7 @@ const IskconGaurangadhamContent = () => (
 const OurMissionContent = () => (
   <div className="space-y-6">
     <h2 className="text-2xl font-semibold text-purple-800 mb-4">Our Mission</h2>
-    <p className="text-gray-700 leading-relaxed">Content about ISKCON's mission will go here...</p>
+    <p className="text-gray-700 leading-relaxed">Content about ISKCON&apos;s mission will go here...</p>
   </div>
 );
 
@@ -183,7 +183,7 @@ const FounderAcharyaContent = () => (
 const OurBeliefsContent = () => (
   <div className="space-y-6">
     <h2 className="text-2xl font-semibold text-purple-800 mb-4">Our Beliefs</h2>
-    <p className="text-gray-700 leading-relaxed">Detailed content about ISKCON's beliefs will go here...</p>
+    <p className="text-gray-700 leading-relaxed">Detailed content about ISKCON&apos;s beliefs will go here...</p>
   </div>
 );
 

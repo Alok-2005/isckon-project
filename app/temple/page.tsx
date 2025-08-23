@@ -1,10 +1,10 @@
-"use client"
+'use client'
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import Navbar from "@/components/Homepage/Navbar";
-import Footer from "@/components/Homepage/Footer";
-import Image from "next/image";
+import Navbar from '@/components/Homepage/Navbar'
+import Footer from '@/components/Homepage/Footer'
+import Image from 'next/image'
 
 const TemplePage = () => {
   const [activeTab, setActiveTab] = useState('temple');
@@ -130,7 +130,7 @@ const TempleIskconContent = () => (
         <Image src="/RadhaKrishna.jpeg" width={500} height={500} alt="Radha Krishna"/>
     </div>
     <p className="text-gray-700 leading-relaxed">
-      Today ISKCON comprises of more than 400 temples, 40 rural communities and over 100 vegetarian restaurants. It also conducts special projects throughout the world, such as "Food for Life", the only free vegetarian relief program in the world.
+      Today ISKCON comprises of more than 400 temples, 40 rural communities and over 100 vegetarian restaurants. It also conducts special projects throughout the world, such as &ldquo;Food for Life&rdquo;, the only free vegetarian relief program in the world.
     </p>
 
     <h2 className="text-2xl font-semibold text-purple-800 mt-8 mb-4">Our Beliefs</h2>
@@ -147,18 +147,18 @@ const TempleIskconContent = () => (
       These teachings are received through the preceptorial line known as the Brahma-Madhav-Gandiya Vaishnava sampradaya. ISKCON is part of the disciple succession which started with Lord Krishna Himself and continued with Srila Vyssadeva, Srila Madhavacharya, Sri Cattanya Mahaprabhu and in the present day His Divine Grace A. C. Bhaktivedanta Swami Prabhupada and his followers.
     </p>
     <p className="text-gray-700 leading-relaxed">
-      ISKCON's teachings are non-secretaria, following the principle of sanatana dharma or eternal religion, which denotes the eternal activity of all living beings – loving devotional service (bhakti-yoga) to Supreme Personality of Godhead.
+      ISKCON&apos;s teachings are non-secretaria, following the principle of sanatana dharma or eternal religion, which denotes the eternal activity of all living beings – loving devotional service (bhakti-yoga) to Supreme Personality of Godhead.
     </p>
 
     <h2 className="text-2xl font-semibold text-purple-800 mt-8 mb-4">History of the Hare Krishna Movement</h2>
     <p className="text-gray-700 leading-relaxed">
-      In 1965, at the age of 69, A. C. Bhaktivedanta Swami Prabhupada boarded the steamship 'Jaladura' from Mumbai on his way to United States. At an age when most people think of retiring Srila Prabhupada undertook this arduous journey to fulfill the mission of Lord Cattanya and follow the instruction of his spiritual master Bhaktisiddhanta Saraswati Thakur to carry the message of Bhagavad-gita and Srimad Bhagavatam to Western world.
+      In 1965, at the age of 69, A. C. Bhaktivedanta Swami Prabhupada boarded the steamship &apos;Jaladura&apos; from Mumbai on his way to United States. At an age when most people think of retiring Srila Prabhupada undertook this arduous journey to fulfill the mission of Lord Cattanya and follow the instruction of his spiritual master Bhaktisiddhanta Saraswati Thakur to carry the message of Bhagavad-gita and Srimad Bhagavatam to Western world.
     </p>
     <p className="text-gray-700 leading-relaxed">
-      After arriving in New York City in September 1965, Srila Prabhupada struggled alone for the first year to establish his Krishna conscious movement. He lived simply, lectured whenever and wherever he got the opportunity and gradually began to attract some small interest in his teaching. In July of 1966, while still working from an obscure storefront on New York City's Lower East Side, Srila Prabhupada nonetheless founded a spiritual society intended for worldwide participation. He called it International Society for Krishna Consciousness or ISKCON for short and thus began the Hare Krishna movement in America.
+      After arriving in New York City in September 1965, Srila Prabhupada struggled alone for the first year to establish his Krishna conscious movement. He lived simply, lectured whenever and wherever he got the opportunity and gradually began to attract some small interest in his teaching. In July of 1966, while still working from an obscure storefront on New York City&apos;s Lower East Side, Srila Prabhupada nonetheless founded a spiritual society intended for worldwide participation. He called it International Society for Krishna Consciousness or ISKCON for short and thus began the Hare Krishna movement in America.
     </p>
     <p className="text-gray-700 leading-relaxed">
-      At the time of incorporation, Srila Prabhupada had not attracted even one committed follower. Undeterred, he enlisted volunteers from among the small group of regular attendees at his evening lectures to act as ISKCON's first trustees. That was then. Today, ISKCON comprises of more than 400 temples worldwide, 40 rural communities and over 100 vegetarian restaurants. It also conducts special projects throughout the world, such as "Food for Life", the only free vegetarian relief program in the world.
+      At the time of incorporation, Srila Prabhupada had not attracted even one committed follower. Undeterred, he enlisted volunteers from among the small group of regular attendees at his evening lectures to act as ISKCON&apos;s first trustees. That was then. Today, ISKCON comprises of more than 400 temples worldwide, 40 rural communities and over 100 vegetarian restaurants. It also conducts special projects throughout the world, such as &ldquo;Food for Life&rdquo;, the only free vegetarian relief program in the world.
     </p>
   </div>
 );
