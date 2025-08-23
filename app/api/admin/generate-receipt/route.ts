@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDb from "@/app/db/connectDb";
-// import Payment from "@/app/models/Payment";
+import Payment from "@/app/models/Payment";
 
 export async function POST(req: NextRequest) {
   await connectDb();
@@ -28,17 +28,17 @@ export async function POST(req: NextRequest) {
     const cashReceiptId = `CASH-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     // ✅ Create payment record first (same as online payments)
-    // const newPayment = await Payment.create({
-    //   name,
-    //   contactNo,
-    //   purpose,
-    //   amount: amountNum,
-    //   to_user,
-    //   transactionId: cashReceiptId,
-    //   done: true, // Mark as completed for cash
-    //   method: "cash",
-    //   updatedAt: new Date(),
-    // });
+    const newPayment = await Payment.create({
+      name,
+      contactNo,
+      purpose,
+      amount: amountNum,
+      to_user,
+      transactionId: cashReceiptId,
+      done: true, // Mark as completed for cash
+      method: "cash",
+      updatedAt: new Date(),
+    });
 
     console.log("Cash payment created:", cashReceiptId);
 
